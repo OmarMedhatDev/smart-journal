@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from . import models, schemas
-
+from . import ai
 # -- User Operations ---
 
 # -- Find User by ID --
@@ -34,11 +34,15 @@ def get_notes(db: Session, skip: int = 0, limit: int = 100):
     return db.query(models.Note).offset(skip).limit(limit).all()
 
 def create_user_note(db: Session, note: schemas.NoteCreate, user_id: int):
+
+    detected_mood = ai.analyze_mood(note.content)
+    generated_tags = ai.generate_tags(note.content)
+
     db_note = models.Note(
         **note.dict(),
         user_id=user_id,
-        mood="Pending AI",
-        tags="Pending AI"   
+        mood=detected_mood,
+        tags=generated_tags  
     )
     db.add(db_note)
     db.commit()
