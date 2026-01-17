@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from . import models, schemas
 from . import ai
+from . import utils
 # -- User Operations ---
 
 # -- Find User by ID --
@@ -14,12 +15,12 @@ def get_user_by_email(db: Session, email: str):
 # -- Create New User --
 def create_user(db: Session, user: schemas.UserCreate):
     # Faking the password hash
-    fake_hashed_password = user.password + "notreallyhashed"
+    hashed_password = utils.hash_password(user.password)
 
     db_user = models.User(
         email=user.email,
         username=user.username,
-        password_hash=fake_hashed_password
+        password_hash=hashed_password
     )
 
     db.add(db_user)
