@@ -1,0 +1,40 @@
+services:
+  - type: web
+    name: moodjournal-backend
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11
+      - key: DATABASE_URL
+        scope: run
+        value: postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:5432/${DB_NAME}
+      - key: SECRET_KEY
+        scope: run
+        value: your-secret-key-here-change-in-dashboard
+      - key: ALGORITHM
+        value: HS256
+      - key: HF_API_KEY
+        scope: run
+        value: your-huggingface-api-key
+
+  - type: web
+    name: moodjournal-frontend
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: cd frontend-react && npm install && npm run build
+    startCommand: cd frontend-react && npm install -g serve && serve -s dist -l $PORT
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+databases:
+  - name: moodjournal-db
+    databaseName: moodjournal
+    user: moodjournal_user
+    region: oregon
+    plan: free

@@ -3,26 +3,29 @@ from sqlalchemy.orm import Session
 from typing import List
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from . import crud, models, schemas, utils
-from .database import SessionLocal, engine
+from .database import SessionLocal, engine, Base
 from jose import JWTError, jwt
 from fastapi.middleware.cors import CORSMiddleware
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
 # creating the tables
-models.Base.metadata.create_all(bind=engine)
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
+# Get CORS origins from environment
+cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost:3000").split(",")
 
-
-origins = [
-    "http://localhost:5173", # React's default port
-    "http://localhost:3000", # Alternative React port
-]
+origins = [origin.strip() for origin in cors_origins]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"], # Allow all methods (POST, GET, etc.)
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
