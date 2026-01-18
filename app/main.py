@@ -5,11 +5,26 @@ from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from . import crud, models, schemas, utils
 from .database import SessionLocal, engine
 from jose import JWTError, jwt
-
+from fastapi.middleware.cors import CORSMiddleware
 # creating the tables
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
+
+
+
+origins = [
+    "http://localhost:5173", # React's default port
+    "http://localhost:3000", # Alternative React port
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"], # Allow all methods (POST, GET, etc.)
+    allow_headers=["*"],
+)
 
 
 # define the Lock
@@ -104,5 +119,19 @@ def read_notes(skip: int = 0,
                limit: int = 100, 
                db : Session = Depends(get_db),
                current_user: models.User = Depends(get_current_user)):
-    notes = crud.get_notes(db, skip=skip, limit=limit)
+    notes = crud.get_notes(db, user_id=current_user.id, skip=skip, limit=limit)
     return notes
+
+@app.delete("/notes/{note_id}")
+def delete_note(
+    note_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)):
+    note = db.query(models.Note).filter(models.Note.id == note_id).first()
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+    if note.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to delete this note")
+    db.delete(note)
+    db.commit()
+    return {"message": "Note deleted successfully"}

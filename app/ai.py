@@ -1,6 +1,7 @@
 import os
 from dotenv import load_dotenv
 from huggingface_hub import InferenceClient
+import json
 
 # Loading the environment variables
 load_dotenv()
@@ -11,27 +12,49 @@ client = InferenceClient(token=API_KEY)
 
 def analyze_mood(text: str):
     """
-    Sends text to Hugging Face API and returns the mood.
+    Uses AI to extract mood keywords and emotional context from the text.
+    Returns detected mood keywords as a comma-separated string.
     """
     if not text or not text.strip():
         return "neutral"
 
     try:
-        # running the model
-        response = client.text_classification(
-            text,
-            model="j-hartmann/emotion-english-distilroberta-base"
-        )
+        # Use text generation to extract mood keywords
+        prompt = f"""Analyze the following text and extract the main mood/emotional keywords in 1-3 words. Return ONLY the mood keywords separated by commas, nothing else. Examples: "happy, excited", "sad, anxious", "frustrated, stressed", "calm, peaceful".
 
-        # the client returns a list of objects not raw json
-        if response:
-            # take the first one which is the highest score
-            return response[0].label
-        return "unknown"
+Text: {text}
+
+Mood keywords:"""
+        
+        response = client.text_generation(
+            prompt,
+            max_new_tokens=50,
+            temperature=0.7
+        )
+        
+        if response and response.strip():
+            # Clean up the response - remove any extra text
+            mood = response.strip().lower()
+            # Remove common prefixes if present
+            mood = mood.replace("mood:", "").replace("keywords:", "").strip()
+            # Keep only the mood part (first sentence)
+            mood = mood.split('\n')[0].strip()
+            return mood if mood else "neutral"
+        return "neutral"
     
     except Exception as e:
         print(f"AI API Error: {e}")
-        return "error"
+        # Fallback: use emotion classification
+        try:
+            response = client.text_classification(
+                text,
+                model="j-hartmann/emotion-english-distilroberta-base"
+            )
+            if response:
+                return response[0].label
+            return "neutral"
+        except:
+            return "neutral"
     
 def generate_tags(text: str):
     keywords = ["work", "study", "family", "food", "sleep", "code", "python", "bug", "feature"]
